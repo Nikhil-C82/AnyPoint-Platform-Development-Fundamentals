@@ -1,0 +1,74 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core" xmlns:db="http://www.mulesoft.org/schema/mule/db"
+	xmlns:http="http://www.mulesoft.org/schema/mule/http"
+	xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
+http://www.mulesoft.org/schema/mule/db http://www.mulesoft.org/schema/mule/db/current/mule-db.xsd
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd">
+	<http:listener-config name="HTTP_Listener_config" doc:name="HTTP Listener config" doc:id="7de15f23-3aa7-4a8f-99bf-863d2acd4b1c" >
+		<http:listener-connection host="0.0.0.0" port="8081" />
+	</http:listener-config>
+	<db:config name="Database_Config" doc:name="Database Config" doc:id="b9011c81-24fd-4157-8e56-4fd4622b7740" >
+		<db:my-sql-connection host="mudb.learn.mulesoft.com" port="3306" user="mule" password="mule" database="training" />
+	</db:config>
+	<flow name="getFlights" doc:id="091631d7-43db-431b-90d9-7fef058464a3" >
+		<http:listener doc:name="Listener" doc:id="991c0681-7e32-451c-8527-bca99cfd6207" config-ref="HTTP_Listener_config" path="/flights" allowedMethods="GET"/>
+		<db:select doc:name="Select" doc:id="5b49fcb9-e48c-444c-81f2-de9066bfbf03" config-ref="Database_Config">
+			<db:sql ><![CDATA[SELECT * from american]]></db:sql>
+		</db:select>
+		<ee:transform doc:name="Transform Message" doc:id="ad5f93ef-edf9-4d03-89c2-f01d291cfaec" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+payload map ( payload01 , indexOfPayload01 ) -> {
+	ID: payload01.ID,
+	code: (payload01.code1 default "") ++ (payload01.code2 default ""),
+	price: payload01.price default 0,
+	departureDate: payload01.takeOffDate as String default "",
+	origin: payload01.fromAirport default "",
+	destination: payload01.toAirport default "",
+	emptySeats: payload01.seatsAvailable default 0,
+	plane: {
+		"type": payload01.planeType default "",
+		totalSeats: payload01.totalSeats default 0
+	}
+}]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+	</flow>
+	<flow name="getFlightsByID" doc:id="11f7efa0-aa04-4c47-913b-f1faddfb8ce4" >
+		<http:listener doc:name="Listener" doc:id="e90ed5e6-c354-4118-9f71-c5dc9cd7750f" config-ref="HTTP_Listener_config" path="/flights/{ID}" allowedMethods="GET" />
+		<db:select doc:name="Select" doc:id="359b9e71-bc52-4a01-b1c5-dad1f2c7efb7" config-ref="Database_Config" >
+			<db:sql ><![CDATA[SELECT * from american where ID = :ID]]></db:sql>
+			<db:input-parameters ><![CDATA[#[{'ID' : attributes.uriParams.ID}]]]></db:input-parameters>
+		</db:select>
+		<ee:transform doc:name="Transform Message" doc:id="ecd04c9b-7e5a-4f2d-83d7-1474ef922a75" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+payload map ( payload01 , indexOfPayload01 ) -> {
+	ID: payload01.ID,
+	code: (payload01.code1 default "") ++ (payload01.code2 default ""),
+	price: payload01.price default 0,
+	departureDate: payload01.takeOffDate as String default "",
+	origin: payload01.fromAirport default "",
+	destination: payload01.toAirport default "",
+	emptySeats: payload01.seatsAvailable default 0,
+	plane: {
+		"type": payload01.planeType default "",
+		totalSeats: payload01.totalSeats default 0
+	}
+}]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+	</flow>
+	<flow name="postFlight" doc:id="a0339a46-68c4-47a4-b1e5-7acad2e8aaee" >
+		<http:listener doc:name="Listener" doc:id="3bb1d4fb-544d-4e2c-acbe-d8196d86d37f" config-ref="HTTP_Listener_config" path="/flights" allowedMethods="POST">
+			<ee:repeatable-file-store-stream bufferUnit="MB" />
+		</http:listener>
+		<set-payload value='{"message": "Flight added (but not really)"}' doc:name="Set Payload" doc:id="6e9a290f-b6de-4975-8d24-3aaead915560" />
+	</flow>
+</mule>
